@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urban Climate Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f6fa;
+            color: #2c3e50;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 40px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        /* Input Section */
+        .input-card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px 40px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #475569;
+            margin-bottom: 8px;
+            letter-spacing: 0.01em;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fafafa;
+            color: #1a1a1a;
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.02em;
+        }
+
+        button:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Results Grid */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .level-section {
+            margin-bottom: 24px;
+        }
+
+        .level-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .level-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .direction-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .direction-badge.mitigation {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .direction-badge.aggravation {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .chart-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 20px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        /* Loading & Error States */
+        .status-message {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .status-message.loading {
+            color: #3b82f6;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .status-message.error {
+            color: #dc2626;
+            border-left: 4px solid #dc2626;
+        }
+
+        .status-message.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .input-grid, .charts-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header, .input-card, .chart-card {
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>BARCLI</h1>
+            <p class="subtitle">Semantic model for analyzing climate interventions in Barcelona neighborhoods</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="input-card">
+            <h2 class="section-title">Configure Analysis</h2>
+            
+            <div class="input-grid">
+                <div class="input-group">
+                    <label for="sentence">Climate Intervention</label>
+                    <input 
+                        type="text" 
+                        id="sentence" 
+                        placeholder="e.g., absence of car usage"
+                        value="absence of car usage"
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label for="neighborhood">Neighborhood</label>
+                    <select id="neighborhood">
+                        <option value="">Loading neighborhoods...</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="analyzeBtn" onclick="analyzeImpact()">
+                Analyze Climate Impact
+            </button>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="loadingMsg" class="status-message loading">
+            <span class="spinner"></span>
+            Analyzing climate impact...
+        </div>
+
+        <div id="errorMsg" class="status-message error"></div>
+
+        <!-- Results Section -->
+        <div id="results" class="results-section">
+            <!-- Neighborhood Level -->
+            <div class="level-section">
+                <div class="level-header">
+                    <h2 class="level-title">Neighborhood Level</h2>
+                    <span id="neighDirection" class="direction-badge"></span>
+                </div>
+                
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <h3 class="chart-card-title">Macro Impact</h3>
+                        <div class="chart-container">
+                            <canvas id="neighMacroChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3 class="chart-card-title">Contributing Drivers</h3>
+                        <div class="chart-container">
+                            <canvas id="neighDriversChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- City Level -->
+            <div class="level-section">
+                <div class="level-header">
+                    <h2 class="level-title">City Level</h2>
+                    <span id="cityDirection" class="direction-badge"></span>
+                </div>
+                
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <h3 class="chart-card-title">Macro Impact</h3>
+                        <div class="chart-container">
+                            <canvas id="cityMacroChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h3 class="chart-card-title">Contributing Drivers</h3>
+                        <div class="chart-container">
+                            <canvas id="cityDriversChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Your Hugging Face Space URL
+        const API_URL = 'https://jokar-man-urban-climate-model.hf.space';
+
+        let charts = {};
+
+        // Muted, professional color palette
+        const macroColors = {
+            'Heat risk': '#ef4444',
+            'Drought risk': '#f59e0b',
+            'Urban health': '#10b981'
+        };
+
+        const driverColors = [
+            '#3b82f6',
+            '#8b5cf6',
+            '#ec4899',
+            '#f59e0b',
+            '#10b981',
+            '#06b6d4'
+        ];
+
+        // Load neighborhoods on page load
+        async function loadNeighborhoods() {
+            try {
+                const response = await fetch(`${API_URL}/neighborhoods`);
+                const data = await response.json();
+                
+                const select = document.getElementById('neighborhood');
+                select.innerHTML = '<option value="">Select a neighborhood...</option>';
+                
+                data.neighborhoods.forEach(n => {
+                    const option = document.createElement('option');
+                    option.value = n;
+                    option.textContent = n;
+                    select.appendChild(option);
+                });
+
+                // Set default neighborhood
+                if (data.neighborhoods.includes('Diagonal Mar i el Front Marítim del Poblenou')) {
+                    select.value = 'Diagonal Mar i el Front Marítim del Poblenou';
+                }
+            } catch (error) {
+                console.error('Error loading neighborhoods:', error);
+                showError('Failed to load neighborhoods. Please check API connection.');
+            }
+        }
+
+        // Show/hide status messages
+        function showLoading() {
+            document.getElementById('loadingMsg').classList.add('active');
+            document.getElementById('errorMsg').classList.remove('active');
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('analyzeBtn').disabled = true;
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingMsg').classList.remove('active');
+            document.getElementById('analyzeBtn').disabled = false;
+        }
+
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = message;
+            errorMsg.classList.add('active');
+            hideLoading();
+        }
+
+        // Analyze impact
+        async function analyzeImpact() {
+            const sentence = document.getElementById('sentence').value;
+            const neighborhood = document.getElementById('neighborhood').value;
+
+            if (!sentence || !neighborhood) {
+                showError('Please enter a sentence and select a neighborhood');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_URL}/analyze`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        sentence: sentence,
+                        neighborhood: neighborhood,
+                        year: 2024
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+                hideLoading();
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Error: ${error.message}. Please check if the API is running.`);
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            document.getElementById('errorMsg').classList.remove('active');
+            document.getElementById('results').classList.add('active');
+
+            // Update direction badges
+            const neighDir = data.neighborhood_level.direction;
+            const cityDir = data.city_level.direction;
+
+            const neighBadge = document.getElementById('neighDirection');
+            neighBadge.textContent = neighDir;
+            neighBadge.className = `direction-badge ${neighDir.toLowerCase()}`;
+
+            const cityBadge = document.getElementById('cityDirection');
+            cityBadge.textContent = cityDir;
+            cityBadge.className = `direction-badge ${cityDir.toLowerCase()}`;
+
+            // Create charts
+            createPieChart('neighMacroChart', data.neighborhood_level.macro_impact, macroColors);
+            createPieChart('neighDriversChart', data.neighborhood_level.drivers, null);
+            createPieChart('cityMacroChart', data.city_level.macro_impact, macroColors);
+            createPieChart('cityDriversChart', data.city_level.drivers, null);
+        }
+
+        // Create pie chart with minimalist style
+        function createPieChart(canvasId, data, colorMap) {
+            const ctx = document.getElementById(canvasId);
+            
+            // Destroy existing chart
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+            
+            const colors = colorMap 
+                ? labels.map(label => colorMap[label])
+                : driverColors.slice(0, labels.length);
+
+            charts[canvasId] = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                        hoverBorderWidth: 2,
+                        hoverBorderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 16,
+                                font: {
+                                    size: 12,
+                                    family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+                                },
+                                color: '#475569',
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            cornerRadius: 8,
+                            titleFont: {
+                                size: 13,
+                                weight: '600'
+                            },
+                            bodyFont: {
+                                size: 12
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = (context.parsed * 100).toFixed(1);
+                                    return `${label}: ${value}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            loadNeighborhoods();
+        });
+
+        // Allow Enter key to trigger analysis
+        document.getElementById('sentence').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                analyzeImpact();
+            }
+        });
+    </script>
+</body>
+</html>
